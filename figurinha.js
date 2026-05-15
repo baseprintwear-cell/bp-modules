@@ -28,6 +28,8 @@
         #bpw-fig-quality-bar { height: 8px; border-radius: 4px; background: #eee; overflow: hidden; }
         #bpw-fig-quality-fill { height: 100%; width: 0%; border-radius: 4px; transition: width 0.5s, background 0.5s; }
         #bpw-fig-quality-msg { font-size: 11px; margin-top: 4px; }
+        #bpw-fig-quality-nota { color: inherit; }
+        #bpw-fig-quality-corte { font-size: 11px; margin-top: 3px; color: #c00; display:none; }
         #bpw-fig-upload-btn-label { display: inline-block; background: #0038a8; color: #fff; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 4px; }
         #bpw-fig-upload-instructions { font-size: 11px; color: #666; margin-top: 8px; line-height: 1.5; }
         #bpw-fig-upload-progress { display: none; font-size: 12px; color: #0038a8; margin-top: 8px; font-weight: 700; }
@@ -41,11 +43,11 @@
       var figHtml = `
         <div id="bpw-figurinha-module">
           <h3>⚽ Dados do Craque para a Figurinha</h3>
-          <div id="bpw-fig-aviso-geral">⚠ Preencha todos os campos e faça o upload da foto para continuar.</div>
+          <div id="bpw-fig-aviso-geral" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;font-size:13px;color:#856404;margin-bottom:12px">⚠ Preencha todos os campos e envie a foto para continuar.</div>
           <div class="bpw-fig-campos-grid">
             <div class="bpw-fig-field">
               <label>Nome do Craque *</label>
-              <input type="text" id="bpw-fig-nome" class="bpw-fig-input" maxlength="12" placeholder="Ex: ARTHUR" autocomplete="off">
+              <input type="text" id="bpw-fig-nome" class="bpw-fig-input" maxlength="12" placeholder="Ex: ARTHUR" autocomplete="off" style="text-transform:uppercase">
             </div>
             <div class="bpw-fig-field">
               <label>Data de Nascimento *</label>
@@ -62,10 +64,7 @@
           </div>
           <div class="bpw-fig-field">
             <label>Time do Coração * <small style="font-weight:normal;text-transform:none">(país obrigatório)</small></label>
-            <input type="text" id="bpw-fig-time" class="bpw-fig-input" maxlength="30" placeholder="SÃO PAULO (BRA)">
-          </div>
-          <div id="bpw-fig-lgpd" style="background:#fff8e1;border:1px solid #f0c040;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#5a4000;line-height:1.6">
-            🔒 <strong>Privacidade & LGPD:</strong> A foto enviada será utilizada exclusivamente para a criação da arte da sua camiseta. Após a conclusão e entrega do pedido, a imagem será permanentemente descartada dos nossos sistemas, em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018)</strong>. Ao finalizar a compra, você declara que é responsável pela imagem enviada e consente com este uso pontual e restrito.
+            <input type="text" id="bpw-fig-time" class="bpw-fig-input" maxlength="30" placeholder="SÃO PAULO (BRA)" style="text-transform:uppercase">
           </div>
           <div class="bpw-fig-field">
             <label>📸 Foto do Craque *</label>
@@ -73,17 +72,21 @@
               <p style="margin:0;font-size:13px;color:#0038a8;font-weight:700">Clique para escolher a foto</p>
               <label id="bpw-fig-upload-btn-label" for="bpw-fig-upload-input">Selecionar Foto</label>
               <input type="file" id="bpw-fig-upload-input" accept=".jpg,.jpeg,.png" capture="environment">
-              <p id="bpw-fig-upload-instructions">Para um resultado perfeito: foto de frente (estilo documento), bem iluminada, sem cortes no rosto ou ombros. Mínimo recomendado: 500 KB.</p>
+              <p id="bpw-fig-upload-instructions">Foto de frente, bem iluminada, sem cortes no rosto ou ombros. Mínimo recomendado: 500 KB.</p>
               <img id="bpw-fig-preview" src="" alt="Preview">
               <div id="bpw-fig-quality-bar-wrap">
-                <div id="bpw-fig-quality-label">Qualidade da imagem:</div>
-                <div id="bpw-fig-quality-bar"><div id="bpw-fig-quality-fill"></div></div>
+                <div id="bpw-fig-quality-label">QUALIDADE DA IMAGEM:</div>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div id="bpw-fig-quality-bar" style="flex:1"><div id="bpw-fig-quality-fill"></div></div>
+                  <div id="bpw-fig-quality-nota" style="font-size:15px;font-weight:700;min-width:36px;text-align:right"></div>
+                </div>
+                <div id="bpw-fig-quality-corte"></div>
                 <div id="bpw-fig-quality-msg"></div>
               </div>
-              <div id="bpw-fig-upload-progress">📤 Enviando foto...</div>
+              <div id="bpw-fig-upload-progress"></div>
             </div>
           </div>
-        </div>`;
+        </div>`
       $after.after(figHtml);
       bpwFigurinhaInit();
     }
@@ -125,7 +128,7 @@
         try{this.setSelectionRange(pos,pos);}catch(e){}
         bpwFigurinhaAtualizar();
       });
-      if(!$('#bpw-fig-time').val()) $('#bpw-fig-time').val('(BRA)');
+      // Time: sem valor default — placeholder já mostra o exemplo
       $(document).on('change','#bpw-fig-upload-input',function(){
         var file=this.files[0];
         if(!file) return;
@@ -134,6 +137,10 @@
       $(document).on('click','#bpw-fig-upload-wrap',function(e){
         if($(e.target).is('input,label,img,div#bpw-fig-quality-bar,div#bpw-fig-quality-fill,div#bpw-fig-quality-bar-wrap,div#bpw-fig-quality-label,div#bpw-fig-quality-msg')) return;
         $('#bpw-fig-upload-input').trigger('click');
+      });
+      $(document).on('input','#bpw-fig-time',function(){
+        this.value=this.value.toUpperCase();
+        bpwFigurinhaAtualizar();
       });
       $(document).on('input change','#bpw-fig-nome,#bpw-fig-nasc,#bpw-fig-alt,#bpw-fig-peso,#bpw-fig-time',function(){
         bpwFigurinhaAtualizar();
@@ -180,14 +187,35 @@
           else if (ratio >= 0.4 && ratio <= 1.4) { score += 15; }
           else { score += 5; msgs.push('proporção estranha'); }
           var pct = score;
-          var color, label, ok;
-          if (pct >= 80) { color='#2a7a2a'; label='✅ Ótima qualidade!'; ok=true; }
-          else if (pct >= 55) { color='#e07b00'; label='⚠ Qualidade razoável — pode funcionar'; ok=true; }
-          else if (pct >= 35) { color='#c00'; label='❌ Qualidade baixa — tente uma foto melhor'; ok=false; }
-          else { color='#c00'; label='❌ Foto inadequada — use uma foto com melhor resolução'; ok=false; }
-          if (msgs.length) label += ' (' + msgs.join(', ') + ')';
+          var nota = (pct / 10).toFixed(1);
+          var color, statusLabel, ok;
+          if (pct >= 80) { color='#2a7a2a'; statusLabel='✅ Ótima qualidade!'; ok=true; }
+          else if (pct >= 50) { color='#e07b00'; statusLabel='⚠ Qualidade razoável — pode funcionar'; ok=true; }
+          else { color='#c00'; statusLabel='❌ Foto abaixo do mínimo — não será aceita'; ok=false; }
           $fill.css({width: pct + '%', background: color});
-          $msg.text(label).css('color', color);
+          $('#bpw-fig-quality-nota').text(nota + '/10').css('color', color);
+          $msg.text(statusLabel).css('color', color);
+          // Linha de corte: mostra só se reprovado
+          var $corte = $('#bpw-fig-quality-corte');
+          if (!ok) {
+            $corte.text('⛔ Linha de aprovação: 5,0 — esta foto não atende o mínimo.').show();
+          } else { $corte.hide(); }
+          // Mostrar APENAS problemas detectados, sem misturar com o status geral
+          if (msgs.length > 0) {
+            var melhorias = {
+              'resolução muito baixa': '📐 Resolução muito baixa — use uma foto com maior definição',
+              'resolução baixa': '📐 Resolução baixa — prefira fotos tiradas com câmera traseira',
+              'resolução moderada': '📐 Resolução moderada — se possível, use uma foto maior',
+              'arquivo muito pequeno': '📦 Arquivo muito pequeno — a foto pode ter baixa qualidade real',
+              'arquivo minúsculo': '📦 Arquivo minúsculo — escolha uma foto original, não comprimida',
+              'arquivo pequeno': '📦 Arquivo pequeno — se possível use uma foto de maior resolução',
+              'proporção estranha': '🖼 Enquadramento: prefira foto de rosto/busto (retrato vertical)'
+            };
+            var listHtml = msgs.map(function(m){ return '<li>' + (melhorias[m]||m) + '</li>'; }).join('');
+            $msg.after('<ul id="bpw-fig-quality-tips" style="margin:6px 0 0 0;padding-left:18px;font-size:11px;color:#555;list-style:disc">' + listHtml + '</ul>');
+          } else {
+            $('#bpw-fig-quality-tips').remove();
+          }
           $barWrap.show();
           if (ok) {
             $wrap.addClass('has-photo');
@@ -290,6 +318,21 @@
     injetarModuloFigurinhas($alvo);
     clearInterval(_figInterval);
     console.log('BP Figurinha: módulo injetado com sucesso');
+    // Pré-selecionar: SIM costas + INSERIR NOME (nativo deste produto)
+    setTimeout(function() {
+      // Forçar SIM personalizar costas
+      var $simBtn = $('.js-insta-variant[data-variation-id="1"]').filter(function() {
+        return ($(this).attr('title')||'').toUpperCase().indexOf('SIM') > -1;
+      });
+      if ($simBtn.length && !$simBtn.hasClass('selected')) $simBtn[0].click();
+      // Forçar INSERIR NOME nas costas
+      $('label, .js-variant-option').each(function() {
+        var t = $(this).text().toUpperCase();
+        if (t.indexOf('INSERIR') > -1 && t.indexOf('NOME') > -1) {
+          if (!$(this).hasClass('selected')) $(this).trigger('click');
+        }
+      });
+    }, 400);
   }, 500);
 
 })(jQuery);
