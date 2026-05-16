@@ -43,27 +43,27 @@
       var figHtml = `
         <div id="bpw-figurinha-module">
           <h3>⚽ Dados do Craque para a Figurinha</h3>
-          <div id="bpw-fig-aviso-geral" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;font-size:13px;color:#856404;margin-bottom:12px">⚠ Preencha todos os campos e envie a foto para continuar.</div>
+          <div id="bpw-fig-aviso-geral" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;font-size:13px;color:#856404;margin-bottom:12px">⚠ Preencha o nome, envie a foto e certifique-se que ela foi aprovada para continuar.</div>
           <div class="bpw-fig-campos-grid">
             <div class="bpw-fig-field">
               <label>Nome do Craque *</label>
               <input type="text" id="bpw-fig-nome" class="bpw-fig-input" maxlength="12" placeholder="Ex: ARTHUR" autocomplete="off" style="text-transform:uppercase">
             </div>
             <div class="bpw-fig-field">
-              <label>Data de Nascimento *</label>
+              <label>Data de Nascimento</label>
               <input type="text" id="bpw-fig-nasc" class="bpw-fig-input" maxlength="10" placeholder="DD/MM/AAAA">
             </div>
             <div class="bpw-fig-field">
-              <label>Altura *</label>
+              <label>Altura</label>
               <input type="text" id="bpw-fig-alt" class="bpw-fig-input" maxlength="7" placeholder="1,20 m">
             </div>
             <div class="bpw-fig-field">
-              <label>Peso *</label>
+              <label>Peso</label>
               <input type="text" id="bpw-fig-peso" class="bpw-fig-input" maxlength="6" placeholder="25 kg">
             </div>
           </div>
           <div class="bpw-fig-field">
-            <label>Time do Coração * <small style="font-weight:normal;text-transform:none">(país obrigatório)</small></label>
+            <label>Time do Coração <small style="font-weight:normal;text-transform:none">(opcional)</small></label>
             <input type="text" id="bpw-fig-time" class="bpw-fig-input" maxlength="30" placeholder="SÃO PAULO (BRA)" style="text-transform:uppercase">
           </div>
           <div class="bpw-fig-field">
@@ -72,7 +72,7 @@
               <p style="margin:0;font-size:13px;color:#0038a8;font-weight:700">Clique para escolher a foto</p>
               <label id="bpw-fig-upload-btn-label" for="bpw-fig-upload-input">Selecionar Foto</label>
               <input type="file" id="bpw-fig-upload-input" accept=".jpg,.jpeg,.png" capture="environment">
-              <p id="bpw-fig-upload-instructions">Foto de frente, bem iluminada, sem cortes no rosto ou ombros. Mínimo recomendado: 500 KB.</p>
+              <p id="bpw-fig-upload-instructions">Melhores fotos: do tronco pra cima, em luz natural de dia, de frente e com o rosto bem visível. Evite selfies com o braço esticado.</p>
               <img id="bpw-fig-preview" src="" alt="Preview">
               <div id="bpw-fig-quality-bar-wrap">
                 <div id="bpw-fig-quality-label">QUALIDADE DA IMAGEM:</div>
@@ -189,33 +189,39 @@
           var pct = score;
           var nota = (pct / 10).toFixed(1);
           var color, statusLabel, ok;
-          if (pct >= 80) { color='#2a7a2a'; statusLabel='✅ Ótima qualidade!'; ok=true; }
-          else if (pct >= 50) { color='#e07b00'; statusLabel='⚠ Qualidade razoável — pode funcionar'; ok=true; }
-          else { color='#c00'; statusLabel='❌ Foto abaixo do mínimo — não será aceita'; ok=false; }
+          if (pct > 80) {
+            color='#2a7a2a'; ok=true;
+            statusLabel='✅ Foto ótima! A figurinha vai ficar incrível.';
+          } else if (pct >= 50) {
+            color='#e07b00'; ok=true;
+            statusLabel='⚠ Foto com qualidade mediana — a figurinha pode ficar melhor com uma foto diferente.';
+          } else {
+            color='#c00'; ok=false;
+            statusLabel='❌ Essa foto não vai ficar nítida na figurinha. Tente outra (veja as dicas abaixo).';
+          }
           $fill.css({width: pct + '%', background: color});
           $('#bpw-fig-quality-nota').text(nota + '/10').css('color', color);
+          $('#bpw-fig-quality-tips').remove();
           $msg.text(statusLabel).css('color', color);
-          // Linha de corte: mostra só se reprovado
+          // Dicas: máximo 3, apenas se nota < 8, priorizando o mais impactante
+          if (pct <= 80 && msgs.length > 0) {
+            var dicas = {
+              'resolução muito baixa': 'Tire a foto direto pela câmera do celular (não use prints ou fotos de fotos)',
+              'resolução baixa': 'Use a câmera traseira do celular — ela tem mais resolução',
+              'resolução moderada': 'Se possível, use uma foto com mais resolução',
+              'arquivo muito pequeno': 'A foto parece comprimida — use o arquivo original',
+              'arquivo minúsculo': 'A foto parece comprimida — use o arquivo original',
+              'arquivo pequeno': 'Se tiver uma versão maior da mesma foto, prefira ela',
+              'proporção estranha': 'Prefira fotos em posição vertical, mostrando rosto e tronco'
+            };
+            var top = msgs.slice(0, 3);
+            var html = top.map(function(m){ return '<li>' + (dicas[m]||m) + '</li>'; }).join('');
+            $msg.after('<ul id="bpw-fig-quality-tips" style="margin:6px 0 0 0;padding-left:18px;font-size:11px;color:#555;list-style:disc">' + html + '</ul>');
+          }
           var $corte = $('#bpw-fig-quality-corte');
           if (!ok) {
-            $corte.text('⛔ Linha de aprovação: 5,0 — esta foto não atende o mínimo.').show();
+            $corte.text('Nota mínima para avançar: 5,0').show();
           } else { $corte.hide(); }
-          // Mostrar APENAS problemas detectados, sem misturar com o status geral
-          if (msgs.length > 0) {
-            var melhorias = {
-              'resolução muito baixa': '📐 Resolução muito baixa — use uma foto com maior definição',
-              'resolução baixa': '📐 Resolução baixa — prefira fotos tiradas com câmera traseira',
-              'resolução moderada': '📐 Resolução moderada — se possível, use uma foto maior',
-              'arquivo muito pequeno': '📦 Arquivo muito pequeno — a foto pode ter baixa qualidade real',
-              'arquivo minúsculo': '📦 Arquivo minúsculo — escolha uma foto original, não comprimida',
-              'arquivo pequeno': '📦 Arquivo pequeno — se possível use uma foto de maior resolução',
-              'proporção estranha': '🖼 Enquadramento: prefira foto de rosto/busto (retrato vertical)'
-            };
-            var listHtml = msgs.map(function(m){ return '<li>' + (melhorias[m]||m) + '</li>'; }).join('');
-            $msg.after('<ul id="bpw-fig-quality-tips" style="margin:6px 0 0 0;padding-left:18px;font-size:11px;color:#555;list-style:disc">' + listHtml + '</ul>');
-          } else {
-            $('#bpw-fig-quality-tips').remove();
-          }
           $barWrap.show();
           if (ok) {
             $wrap.addClass('has-photo');
@@ -270,11 +276,9 @@
       var time = $('#bpw-fig-time').val().trim();
       var fotoOk = window._bpwFotoOk;
       var erros = [];
+      // Obrigatórios: nome e foto. Data com validação de formato se preenchida.
       if(!nome) erros.push('#bpw-fig-nome');
-      if(nasc.length < 10) erros.push('#bpw-fig-nasc');
-      if(!alt || alt==='m' || alt===' m') erros.push('#bpw-fig-alt');
-      if(!peso || peso==='kg' || peso===' kg') erros.push('#bpw-fig-peso');
-      if(!time) erros.push('#bpw-fig-time');
+      if(nasc && nasc.length > 0 && nasc.length < 10) erros.push('#bpw-fig-nasc'); // só valida se preenchida
       $('.bpw-fig-input').removeClass('error');
       erros.forEach(function(id){ $(id).addClass('error'); });
       if(erros.length>0||!fotoOk) {
