@@ -27,9 +27,9 @@
         #bpw-fig-quality-label { font-size: 12px; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; }
         #bpw-fig-quality-bar { height: 8px; border-radius: 4px; background: #eee; overflow: hidden; }
         #bpw-fig-quality-fill { height: 100%; width: 0%; border-radius: 4px; transition: width 0.5s, background 0.5s; }
-        #bpw-fig-quality-msg { font-size: 11px; margin-top: 4px; }
+        #bpw-fig-quality-msg { font-size: 13px; margin-top: 5px; font-weight: 600; }
         #bpw-fig-quality-nota { color: inherit; }
-        #bpw-fig-quality-corte { font-size: 11px; margin-top: 3px; color: #c00; display:none; }
+        #bpw-fig-quality-corte { font-size: 12px; margin-top: 4px; color: #c00; display:none; }
         #bpw-fig-upload-btn-label { display: inline-block; background: #0038a8; color: #fff; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 4px; }
         #bpw-fig-upload-instructions { font-size: 11px; color: #666; margin-top: 8px; line-height: 1.5; }
         #bpw-fig-upload-progress { display: none; font-size: 12px; color: #0038a8; margin-top: 8px; font-weight: 700; }
@@ -188,40 +188,47 @@
           else { score += 5; msgs.push('proporção estranha'); }
           var pct = score;
           var nota = (pct / 10).toFixed(1);
-          var color, statusLabel, ok;
-          if (pct > 80) {
-            color='#2a7a2a'; ok=true;
-            statusLabel='✅ Foto ótima! A figurinha vai ficar incrível.';
-          } else if (pct >= 50) {
-            color='#e07b00'; ok=true;
-            statusLabel='⚠ Foto com qualidade mediana — a figurinha pode ficar melhor com uma foto diferente.';
-          } else {
-            color='#c00'; ok=false;
-            statusLabel='❌ Essa foto não vai ficar nítida na figurinha. Tente outra (veja as dicas abaixo).';
-          }
-          $fill.css({width: pct + '%', background: color});
-          $('#bpw-fig-quality-nota').text(nota + '/10').css('color', color);
+          var ok;
           $('#bpw-fig-quality-tips').remove();
-          $msg.text(statusLabel).css('color', color);
-          // Dicas: máximo 3, apenas se nota < 8, priorizando o mais impactante
-          if (pct <= 80 && msgs.length > 0) {
-            var dicas = {
-              'resolução muito baixa': 'Tire a foto direto pela câmera do celular (não use prints ou fotos de fotos)',
-              'resolução baixa': 'Use a câmera traseira do celular — ela tem mais resolução',
-              'resolução moderada': 'Se possível, use uma foto com mais resolução',
-              'arquivo muito pequeno': 'A foto parece comprimida — use o arquivo original',
-              'arquivo minúsculo': 'A foto parece comprimida — use o arquivo original',
-              'arquivo pequeno': 'Se tiver uma versão maior da mesma foto, prefira ela',
-              'proporção estranha': 'Prefira fotos em posição vertical, mostrando rosto e tronco'
-            };
-            var top = msgs.slice(0, 3);
-            var html = top.map(function(m){ return '<li>' + (dicas[m]||m) + '</li>'; }).join('');
-            $msg.after('<ul id="bpw-fig-quality-tips" style="margin:6px 0 0 0;padding-left:18px;font-size:11px;color:#555;list-style:disc">' + html + '</ul>');
+          $('#bpw-fig-quality-corte').hide().text('');
+          $msg.text('').css('color','');
+          if (pct > 80) {
+            // Ótima — só status, sem mais nada
+            ok = true;
+            $fill.css({width: pct + '%', background: '#2a7a2a'});
+            $('#bpw-fig-quality-nota').text(nota + '/10').css('color','#2a7a2a');
+            $msg.text('✅ Aprovada! Pode continuar.').css('color','#2a7a2a');
+          } else if (pct >= 50) {
+            // Mediana — avança mas mostra 1 insight + foto exemplo
+            ok = true;
+            $fill.css({width: pct + '%', background: '#e07b00'});
+            $('#bpw-fig-quality-nota').text(nota + '/10').css('color','#e07b00');
+            $msg.text('⚠ Pode melhorar — mas já dá pra usar.').css('color','#e07b00');
+            var dica = '';
+            if (msgs.indexOf('resolução muito baixa') > -1 || msgs.indexOf('resolução baixa') > -1) {
+              dica = 'Use a câmera traseira do celular, não a selfie.';
+            } else if (msgs.indexOf('arquivo muito pequeno') > -1 || msgs.indexOf('arquivo minúsculo') > -1 || msgs.indexOf('arquivo pequeno') > -1) {
+              dica = 'Use o arquivo original da foto, sem compressão.';
+            } else if (msgs.indexOf('proporção estranha') > -1) {
+              dica = 'Prefira foto vertical mostrando rosto e tronco.';
+            } else if (msgs.length > 0) {
+              dica = 'Uma foto com mais luz e resolução deixa a figurinha muito melhor.';
+            }
+            if (dica) {
+              $msg.after('<div id="bpw-fig-quality-tips" style="margin:6px 0 0;font-size:12px;color:#6b4c00">'
+                + '💡 ' + dica + '<br><img src="https://d1a9qnv764bsoo.cloudfront.net/stores/006/739/135/rte/14%20Tom_B.png" style="height:60px;margin-top:6px;border-radius:6px;opacity:.85" alt="Exemplo de boa foto"></div>');
+            }
+          } else {
+            // Ruim — bloqueia + foto exemplo
+            ok = false;
+            $fill.css({width: pct + '%', background: '#c00'});
+            $('#bpw-fig-quality-nota').text(nota + '/10').css('color','#c00');
+            $msg.text('❌ Foto com qualidade baixa — a figurinha não vai ficar boa assim.').css('color','#c00');
+            $('#bpw-fig-quality-corte').text('Use uma foto como esta como referência:').show();
+            $msg.after('<div id="bpw-fig-quality-tips" style="margin:6px 0 0;font-size:12px;color:#c00">'
+              + '<img src="https://d1a9qnv764bsoo.cloudfront.net/stores/006/739/135/rte/14%20Tom_B.png" style="height:70px;margin-top:4px;border-radius:6px" alt="Exemplo de boa foto"><br>'
+              + '<span style="color:#555">Tronco pra cima · luz natural · de frente · câmera traseira</span></div>');
           }
-          var $corte = $('#bpw-fig-quality-corte');
-          if (!ok) {
-            $corte.text('Nota mínima para avançar: 5,0').show();
-          } else { $corte.hide(); }
           $barWrap.show();
           if (ok) {
             $wrap.addClass('has-photo');
@@ -276,9 +283,8 @@
       var time = $('#bpw-fig-time').val().trim();
       var fotoOk = window._bpwFotoOk;
       var erros = [];
-      // Obrigatórios: nome e foto. Data com validação de formato se preenchida.
+      // Obrigatório: apenas nome e foto
       if(!nome) erros.push('#bpw-fig-nome');
-      if(nasc && nasc.length > 0 && nasc.length < 10) erros.push('#bpw-fig-nasc'); // só valida se preenchida
       $('.bpw-fig-input').removeClass('error');
       erros.forEach(function(id){ $(id).addClass('error'); });
       if(erros.length>0||!fotoOk) {
