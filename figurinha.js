@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05c — autônomo, sem dependência do motor
+// Versão: 2026-05d — score simplificado, só nome obrigatório, upload silencioso
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -253,10 +253,9 @@
       var fotoOk = window._bpwFotoOk;
       var dados = 'Nome: '+nome+' | Nasc: '+nasc+' | Alt: '+alt+' | Peso: '+peso+' | Time: '+time;
       $('#bpw-h-figurinha').val(dados);
-      // Upload da foto para o Drive via GAS (executa uma vez quando foto OK)
+      // Upload para Drive: feito silenciosamente, sem mensagens de erro para o usuário
       if(window._bpwFotoOk && window._bpwFotoBase64 && !window._bpwUploadFeito && BPW_GAS_URL){
         window._bpwUploadFeito = true;
-        $('#bpw-fig-upload-progress').show();
         var nomeArq = nome||'cliente';
         $.ajax({
           url: BPW_GAS_URL,
@@ -266,11 +265,11 @@
           success: function(r){
             try{
               var res = typeof r==='string'?JSON.parse(r):r;
-              if(res.ok){ $('#bpw-h-foto-drive').val(res.link); $('#bpw-fig-upload-progress').text('✅ Foto enviada com sucesso!').css('color','#2a7a2a'); }
-              else{ window._bpwUploadFeito=false; $('#bpw-fig-upload-progress').text('⚠ Falha no envio. Tente novamente.').css('color','#c00'); }
-            }catch(ex){ window._bpwUploadFeito=false; $('#bpw-fig-upload-progress').text('⚠ Tente novamente.').css('color','#c00'); }
+              if(res.ok){ $('#bpw-h-foto-drive').val(res.link); }
+              else{ window._bpwUploadFeito=false; }
+            }catch(ex){ window._bpwUploadFeito=false; }
           },
-          error: function(){ window._bpwUploadFeito=false; $('#bpw-fig-upload-progress').text('⚠ Ops! Problema com sua foto. Tente novamente.').css('color','#c00'); }
+          error: function(){ window._bpwUploadFeito=false; }
         });
       }
     }
