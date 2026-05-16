@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05d — score simplificado, só nome obrigatório, upload silencioso
+// Versão: 2026-05e — score simplificado, só nome obrigatório, upload silencioso
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -18,6 +18,7 @@
         .bpw-fig-input { width: 100%; padding: 9px 12px; border: 1.5px solid #ccc; border-radius: 6px; font-size: 14px; font-family: Montserrat, sans-serif; box-sizing: border-box; }
         .bpw-fig-input:focus { border-color: #0038a8; outline: none; box-shadow: 0 0 0 3px rgba(0,56,168,0.15); }
         .bpw-fig-input.error { border-color: #c00; background: #fff5f5; }
+        .bpw-fig-input.valid { border-color: #2a7a2a; background: #f0fff0; }
         #bpw-fig-upload-wrap { border: 2px dashed #0038a8; border-radius: 8px; padding: 16px; text-align: center; background: #fff; cursor: pointer; transition: background 0.2s; }
         #bpw-fig-upload-wrap:hover { background: #e8edff; }
         #bpw-fig-upload-wrap.has-photo { border-style: solid; border-color: #2a7a2a; background: #f0fff0; }
@@ -72,7 +73,7 @@
               <p style="margin:0;font-size:13px;color:#0038a8;font-weight:700">Clique para escolher a foto</p>
               <label id="bpw-fig-upload-btn-label" for="bpw-fig-upload-input">Selecionar Foto</label>
               <input type="file" id="bpw-fig-upload-input" accept=".jpg,.jpeg,.png" capture="environment">
-              <p id="bpw-fig-upload-instructions">Melhores fotos: do tronco pra cima, em luz natural de dia, de frente e com o rosto bem visível. Evite selfies com o braço esticado.</p>
+              
               <img id="bpw-fig-preview" src="" alt="Preview">
               <div id="bpw-fig-quality-bar-wrap">
                 <div id="bpw-fig-quality-label">QUALIDADE DA IMAGEM:</div>
@@ -216,18 +217,18 @@
             }
             if (dica) {
               $msg.after('<div id="bpw-fig-quality-tips" style="margin:6px 0 0;font-size:12px;color:#6b4c00">'
-                + '💡 ' + dica + '<br><img src="https://d1a9qnv764bsoo.cloudfront.net/stores/006/739/135/rte/14%20Tom_B.png" style="height:60px;margin-top:6px;border-radius:6px;opacity:.85" alt="Exemplo de boa foto"></div>');
+                + '💡 ' + dica + '<br><img src="https://d1a9qnv764bsoo.cloudfront.net/stores/006/739/135/rte/14%20Tom_B.png" style="height:90px;margin-top:6px;border-radius:6px;opacity:.9" alt="Exemplo de boa foto"></div>');
             }
           } else {
             // Ruim — bloqueia + foto exemplo
             ok = false;
             $fill.css({width: pct + '%', background: '#c00'});
-            $('#bpw-fig-quality-nota').text(nota + '/10').css('color','#c00');
-            $msg.text('❌ Foto com qualidade baixa — a figurinha não vai ficar boa assim.').css('color','#c00');
-            $('#bpw-fig-quality-corte').text('Use uma foto como esta como referência:').show();
-            $msg.after('<div id="bpw-fig-quality-tips" style="margin:6px 0 0;font-size:12px;color:#c00">'
-              + '<img src="https://d1a9qnv764bsoo.cloudfront.net/stores/006/739/135/rte/14%20Tom_B.png" style="height:70px;margin-top:4px;border-radius:6px" alt="Exemplo de boa foto"><br>'
-              + '<span style="color:#555">Tronco pra cima · luz natural · de frente · câmera traseira</span></div>');
+            $('#bpw-fig-quality-nota').text(nota + '            $msg.text('❌ Foto com qualidade baixa — a figurinha não vai ficar boa assim.').css('color','#c00');
+            $('#bpw-fig-quality-corte').hide();
+            $msg.after('<div id="bpw-fig-quality-tips" style="margin:8px 0 0;font-size:12px;text-align:center">'
+              + '<div style="color:#555;margin-bottom:6px">Use uma foto assim como referência:</div>'
+              + '<img src="https://d1a9qnv764bsoo.cloudfront.net/stores/006/739/135/rte/14%20Tom_B.png" style="height:105px;border-radius:6px;display:block;margin:0 auto 4px" alt="Exemplo de boa foto">'
+              + '<span style="color:#888;font-size:11px">tronco pra cima · luz natural · de frente · câmera traseira</span></div>');
           }
           $barWrap.show();
           if (ok) {
@@ -250,6 +251,26 @@
       var alt  = $('#bpw-fig-alt').val().trim();
       var peso = $('#bpw-fig-peso').val().trim();
       var time = $('#bpw-fig-time').val().trim();
+      // Feedback visual em tempo real por campo
+      // Nome: obrigatório
+      var $nome = $('#bpw-fig-nome');
+      $nome.removeClass('error valid');
+      if(nome) $nome.addClass('valid'); // verde se preenchido
+      // Nasc: verde se completo, vermelho se digitou mas incompleto, azul se vazio
+      var $nasc = $('#bpw-fig-nasc');
+      $nasc.removeClass('error valid');
+      if(nasc.length === 10) $nasc.addClass('valid');
+      else if(nasc.length > 0) $nasc.addClass('error');
+      // Alt, Peso, Time: opcionais — verde se preenchido, neutro se vazio
+      var $alt = $('#bpw-fig-alt');
+      $alt.removeClass('error valid');
+      if(alt && alt !== 'm' && alt !== ' m') $alt.addClass('valid');
+      var $peso = $('#bpw-fig-peso');
+      $peso.removeClass('error valid');
+      if(peso && peso !== 'kg' && peso !== ' kg') $peso.addClass('valid');
+      var $time = $('#bpw-fig-time');
+      $time.removeClass('error valid');
+      if(time) $time.addClass('valid');
       var fotoOk = window._bpwFotoOk;
       var dados = 'Nome: '+nome+' | Nasc: '+nasc+' | Alt: '+alt+' | Peso: '+peso+' | Time: '+time;
       $('#bpw-h-figurinha').val(dados);
