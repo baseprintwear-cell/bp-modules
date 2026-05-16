@@ -223,7 +223,8 @@
             // Ruim — bloqueia + foto exemplo
             ok = false;
             $fill.css({width: pct + '%', background: '#c00'});
-            $('#bpw-fig-quality-nota').text(nota + '            $msg.text('❌ Foto com qualidade baixa — a figurinha não vai ficar boa assim.').css('color','#c00');
+            $('#bpw-fig-quality-nota').text(nota + '/10').css('color','#c00');
+            $msg.text('❌ Foto com qualidade baixa — a figurinha não vai ficar boa assim.').css('color','#c00');
             $('#bpw-fig-quality-corte').hide();
             $msg.after('<div id="bpw-fig-quality-tips" style="margin:8px 0 0;font-size:12px;text-align:center">'
               + '<div style="color:#555;margin-bottom:6px">Use uma foto assim como referência:</div>'
