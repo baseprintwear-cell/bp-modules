@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05j — nome 20ch + botão ALTERAR + mobile reseleção
+// Versão: 2026-05k — fix upload Drive (CORS) + detecção enquadramento
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -199,6 +199,36 @@
           if (ratio >= 0.6 && ratio <= 1.0) { score += 25; }
           else if (ratio >= 0.4 && ratio <= 1.4) { score += 15; }
           else { score += 5; msgs.push('proporção estranha'); }
+          // Análise de enquadramento via canvas: detecta tom de pele no centro
+          // Se nada parecer humano, penaliza
+          try {
+            var cv = document.createElement('canvas');
+            var cw = 80, ch = 80;
+            cv.width = cw; cv.height = ch;
+            var ctx = cv.getContext('2d');
+            ctx.drawImage(img, 0, 0, cw, ch);
+            var data = ctx.getImageData(0, 0, cw, ch).data;
+            var skinPx = 0, totalPx = 0;
+            // Analisa apenas o terço central vertical (onde o rosto/busto deve estar)
+            var yStart = Math.floor(ch * 0.15), yEnd = Math.floor(ch * 0.75);
+            for (var y = yStart; y < yEnd; y++) {
+              for (var x = 0; x < cw; x++) {
+                var i = (y * cw + x) * 4;
+                var r = data[i], g = data[i+1], b = data[i+2];
+                totalPx++;
+                // Detecção de tom de pele (regra de Kovac/Crowley simplificada)
+                if (r > 95 && g > 40 && b > 20 &&
+                    Math.max(r,g,b) - Math.min(r,g,b) > 15 &&
+                    Math.abs(r-g) > 15 && r > g && r > b) {
+                  skinPx++;
+                }
+              }
+            }
+            var skinRatio = totalPx > 0 ? skinPx / totalPx : 0;
+            if (skinRatio >= 0.08) { score += 15; } // pessoa detectada (rosto/braços visíveis)
+            else if (skinRatio >= 0.03) { score += 7; } // pouco visível (talvez de costas/longe)
+            else { msgs.push('sem pessoa detectada'); } // não parece foto de pessoa
+          } catch(e) { /* CORS de imagem externa pode bloquear getImageData, ignora */ }
           var pct = score;
           var nota = (pct / 10).toFixed(1);
           var ok;
@@ -218,7 +248,9 @@
             $('#bpw-fig-quality-nota').text(nota + '/10').css('color','#e07b00');
             $msg.text('⚠ Pode melhorar — mas já dá pra usar.').css('color','#e07b00');
             var dica = '';
-            if (msgs.indexOf('resolução muito baixa') > -1 || msgs.indexOf('resolução baixa') > -1) {
+            if (msgs.indexOf('sem pessoa detectada') > -1) {
+              dica = 'A foto deve mostrar a pessoa de frente, com o rosto visível.';
+            } else if (msgs.indexOf('resolução muito baixa') > -1 || msgs.indexOf('resolução baixa') > -1) {
               dica = 'Use a câmera traseira do celular, não a selfie.';
             } else if (msgs.indexOf('arquivo muito pequeno') > -1 || msgs.indexOf('arquivo minúsculo') > -1 || msgs.indexOf('arquivo pequeno') > -1) {
               dica = 'Use o arquivo original da foto, sem compressão.';
@@ -295,19 +327,31 @@
       if(window._bpwFotoOk && window._bpwFotoBase64 && !window._bpwUploadFeito && BPW_GAS_URL){
         window._bpwUploadFeito = true;
         var nomeArq = nome||'cliente';
+        console.log('[BPW Fig] Enviando foto para Drive...');
         $.ajax({
           url: BPW_GAS_URL,
           method: 'POST',
-          contentType: 'application/json',
+          contentType: 'text/plain;charset=utf-8',
           data: JSON.stringify({foto: window._bpwFotoBase64, nome: nomeArq, pedido: 'PENDENTE', tipo: 'image/jpeg'}),
           success: function(r){
             try{
               var res = typeof r==='string'?JSON.parse(r):r;
-              if(res.ok){ $('#bpw-h-foto-drive').val(res.link); }
-              else{ window._bpwUploadFeito=false; }
-            }catch(ex){ window._bpwUploadFeito=false; }
+              if(res.ok){
+                $('#bpw-h-foto-drive').val(res.link);
+                console.log('[BPW Fig] ✅ Foto salva no Drive:', res.link);
+              } else {
+                window._bpwUploadFeito=false;
+                console.error('[BPW Fig] ❌ GAS retornou erro:', res);
+              }
+            } catch(ex) {
+              window._bpwUploadFeito=false;
+              console.error('[BPW Fig] ❌ Resposta inválida:', r, ex);
+            }
           },
-          error: function(){ window._bpwUploadFeito=false; }
+          error: function(xhr, status, err){
+            window._bpwUploadFeito=false;
+            console.error('[BPW Fig] ❌ Falha na requisição:', status, err, xhr);
+          }
         });
       }
     }
