@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05h — mobile: galeria+camera; ajustes finos
+// Versão: 2026-05i — centralização preview + frase acima da imagem + debug mobile
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -23,7 +23,7 @@
         #bpw-fig-upload-wrap:hover { background: #e8edff; }
         #bpw-fig-upload-wrap.has-photo { border-style: solid; border-color: #2a7a2a; background: #f0fff0; }
         #bpw-fig-upload-input { display: none; }
-        #bpw-fig-preview { max-width: 130px; max-height: 130px; border-radius: 8px; margin: 10px auto 12px; display: none; border: 2px solid #0038a8; }
+        #bpw-fig-preview { max-width: 130px; max-height: 130px; border-radius: 8px; margin: 12px auto; display: none; border: 2px solid #0038a8; }
         #bpw-fig-quality-bar-wrap { margin-top: 10px; display: none; }
         #bpw-fig-quality-label { font-size: 12px; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; }
         #bpw-fig-quality-bar { height: 8px; border-radius: 4px; background: #eee; overflow: hidden; }
@@ -32,6 +32,7 @@
         #bpw-fig-quality-nota { color: inherit; }
         #bpw-fig-quality-corte { font-size: 12px; margin-top: 4px; color: #c00; display:none; }
         #bpw-fig-upload-btn-label { display: inline-block; background: #0038a8; color: #fff; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 4px; }
+        #bpw-fig-preview.has-img + #bpw-fig-upload-btn-label { display: block; max-width: 160px; margin: 8px auto 0; }
         #bpw-fig-upload-instructions { font-size: 11px; color: #666; margin-top: 8px; line-height: 1.5; }
         #bpw-fig-upload-progress { display: none; font-size: 12px; color: #0038a8; margin-top: 8px; font-weight: 700; }
         #bpw-fig-aviso-geral { display: none; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 10px 14px; font-size: 13px; color: #856404; margin-bottom: 12px; }
@@ -129,9 +130,11 @@
         bpwFigurinhaAtualizar();
       });
       // Time: sem valor default — placeholder já mostra o exemplo
-      $(document).on('change','#bpw-fig-upload-input',function(){
+      $(document).on('change input','#bpw-fig-upload-input',function(e){
+        console.log('[BPW Fig] Input event:', e.type, 'files:', this.files.length);
         var file=this.files[0];
-        if(!file) return;
+        if(!file) { console.log('[BPW Fig] Sem arquivo'); return; }
+        console.log('[BPW Fig] Arquivo:', file.name, file.size, 'bytes');
         bpwValidarFoto(file);
       });
       $(document).on('click','#bpw-fig-upload-wrap',function(e){
@@ -167,7 +170,7 @@
       reader.onload = function(e) {
         var dataUrl = e.target.result;
         window._bpwFotoBase64 = dataUrl.split(',')[1];
-        $preview.attr('src', dataUrl).show();
+        $preview.attr('src', dataUrl).addClass('has-img').show();
         var img = new Image();
         img.onload = function() {
           var w = img.naturalWidth, h = img.naturalHeight;
@@ -217,8 +220,8 @@
             if (dica) {
               $msg.after('<div id="bpw-fig-quality-tips" style="margin:8px 0 0;font-size:12px;color:#6b4c00;text-align:center">'
                 + '<div style="text-align:left">💡 ' + dica + '</div>'
-                + '<img src="https://d1a9qnv764bsoo.cloudfront.net/stores/006/739/135/rte/14%20Tom_B.png" style="height:90px;margin:8px auto 4px;border-radius:6px;opacity:.95;display:block" alt="Exemplo de boa foto">'
-                + '<div style="color:#555;font-size:11px;line-height:1.4">Para melhorar use a foto original, sem compressão ou cortes — ou envie outra imagem como esta de exemplo.</div></div>');
+                + '<div style="color:#555;font-size:11px;line-height:1.4;margin-top:8px">Para melhorar use a foto original, sem compressão ou cortes — ou envie outra imagem como esta de exemplo:</div>'
+                + '<img src="https://d1a9qnv764bsoo.cloudfront.net/stores/006/739/135/rte/14%20Tom_B.png" style="height:90px;margin:6px auto 0;border-radius:6px;opacity:.95;display:block" alt="Exemplo de boa foto"></div>');
             }
           } else {
             // Ruim — bloqueia + foto exemplo
