@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05g — ajustes UI + suporte mobile melhorado
+// Versão: 2026-05h — mobile: galeria+camera; ajustes finos
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -73,7 +73,7 @@
               <p style="margin:0;font-size:13px;color:#0038a8;font-weight:700">Clique para escolher a foto</p>
               <img id="bpw-fig-preview" src="" alt="Preview">
               <label id="bpw-fig-upload-btn-label" for="bpw-fig-upload-input">Selecionar Foto</label>
-              <input type="file" id="bpw-fig-upload-input" accept=".jpg,.jpeg,.png" capture="environment">
+              <input type="file" id="bpw-fig-upload-input" accept="image/*">
               <div id="bpw-fig-quality-bar-wrap">
                 <div id="bpw-fig-quality-label">QUALIDADE DA IMAGEM:</div>
                 <div style="display:flex;align-items:center;gap:10px">
