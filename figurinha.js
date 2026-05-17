@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05k — fix upload Drive (CORS) + detecção enquadramento
+// Versão: 2026-05l — diagnostico timing + fix upload Drive + enquadramento
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -389,20 +389,24 @@
   var _figInterval = setInterval(function() {
     if (_figTentativas === 0) console.log('[BPW Fig] Procurando bp-container...');
     _figTentativas++;
-    if (_figTentativas > 80) { clearInterval(_figInterval); return; } // 40s timeout (mobile pode ser lento)
+    if (_figTentativas > 80) {
+      console.error('[BPW Fig] TIMEOUT: bp-container nunca apareceu. bp-container='+$('#bp-container').length+' variation-id-1='+$('.js-product-variants-group[data-variation-id="1"]').length+' estampa='+$('#bpw-bloco-estampa').length);
+      clearInterval(_figInterval); return;
+    }
 
-    // Verifica se estamos na página certa
+    // Log a cada 10 tentativas (5s) para acompanhar
+    if (_figTentativas % 10 === 0) {
+      console.log('[BPW Fig] Tentativa '+_figTentativas+': bp-container='+$('#bp-container').length+' estampa='+$('#bpw-bloco-estampa').length+' var-id-1='+$('.js-product-variants-group[data-variation-id="1"]').length);
+    }
+
     if (window.location.href.indexOf('craque-de-figurinha') === -1) {
       clearInterval(_figInterval); return;
     }
 
-    // Aguarda o motor ter injetado o bp-container (prova que o DOM está pronto)
     if (!$('#bp-container').length) return;
 
-    // Já injetado?
     if ($('#bpw-figurinha-module').length) { clearInterval(_figInterval); return; }
 
-    // Encontra ponto de injeção: após o bloco de estampa ou após variation-id=1
     var $alvo = $('#bpw-bloco-estampa');
     if (!$alvo.length) $alvo = $('.js-product-variants-group[data-variation-id="1"]');
     if (!$alvo.length) return; // ainda não está no DOM
