@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05l — diagnostico timing + fix upload Drive + enquadramento
+// Versão: 2026-05m — upload Drive FormData + validador pessoa fix
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -200,7 +200,6 @@
           else if (ratio >= 0.4 && ratio <= 1.4) { score += 15; }
           else { score += 5; msgs.push('proporção estranha'); }
           // Análise de enquadramento via canvas: detecta tom de pele no centro
-          // Se nada parecer humano, penaliza
           try {
             var cv = document.createElement('canvas');
             var cw = 80, ch = 80;
@@ -209,27 +208,41 @@
             ctx.drawImage(img, 0, 0, cw, ch);
             var data = ctx.getImageData(0, 0, cw, ch).data;
             var skinPx = 0, totalPx = 0;
-            // Analisa apenas o terço central vertical (onde o rosto/busto deve estar)
-            var yStart = Math.floor(ch * 0.15), yEnd = Math.floor(ch * 0.75);
+            var yStart = Math.floor(ch * 0.15), yEnd = Math.floor(ch * 0.80);
             for (var y = yStart; y < yEnd; y++) {
               for (var x = 0; x < cw; x++) {
                 var i = (y * cw + x) * 4;
                 var r = data[i], g = data[i+1], b = data[i+2];
                 totalPx++;
-                // Detecção de tom de pele (regra de Kovac/Crowley simplificada)
-                if (r > 95 && g > 40 && b > 20 &&
-                    Math.max(r,g,b) - Math.min(r,g,b) > 15 &&
-                    Math.abs(r-g) > 15 && r > g && r > b) {
+                // Detecção de tom de pele — abrange tons claros e escuros
+                // Regra: R dominante, com brilho e saturação suficientes
+                var maxC = Math.max(r,g,b), minC = Math.min(r,g,b);
+                if (r > 60 && g > 30 && b > 15 &&
+                    maxC - minC > 12 &&
+                    r > g && r >= b &&
+                    Math.abs(r-g) > 8) {
                   skinPx++;
                 }
               }
             }
             var skinRatio = totalPx > 0 ? skinPx / totalPx : 0;
-            if (skinRatio >= 0.08) { score += 15; } // pessoa detectada (rosto/braços visíveis)
-            else if (skinRatio >= 0.03) { score += 7; } // pouco visível (talvez de costas/longe)
-            else { msgs.push('sem pessoa detectada'); } // não parece foto de pessoa
-          } catch(e) { /* CORS de imagem externa pode bloquear getImageData, ignora */ }
+            console.log('[BPW Fig] Análise enquadramento — pele detectada:', (skinRatio*100).toFixed(1)+'%');
+            if (skinRatio >= 0.08) {
+              score += 15;
+            } else if (skinRatio >= 0.03) {
+              score += 7;
+              msgs.push('enquadramento parcial');
+            } else {
+              msgs.push('sem pessoa detectada');
+            }
+          } catch(e) {
+            console.warn('[BPW Fig] Erro na análise de enquadramento:', e);
+          }
           var pct = score;
+          // Se não detectou pessoa, força reprovação independente dos outros pontos
+          if (msgs.indexOf('sem pessoa detectada') > -1) {
+            pct = Math.min(pct, 40);
+          }
           var nota = (pct / 10).toFixed(1);
           var ok;
           $('#bpw-fig-quality-tips').remove();
@@ -250,6 +263,8 @@
             var dica = '';
             if (msgs.indexOf('sem pessoa detectada') > -1) {
               dica = 'A foto deve mostrar a pessoa de frente, com o rosto visível.';
+            } else if (msgs.indexOf('enquadramento parcial') > -1) {
+              dica = 'Tente uma foto de frente, com o rosto e tronco bem visíveis.';
             } else if (msgs.indexOf('resolução muito baixa') > -1 || msgs.indexOf('resolução baixa') > -1) {
               dica = 'Use a câmera traseira do celular, não a selfie.';
             } else if (msgs.indexOf('arquivo muito pequeno') > -1 || msgs.indexOf('arquivo minúsculo') > -1 || msgs.indexOf('arquivo pequeno') > -1) {
@@ -327,31 +342,32 @@
       if(window._bpwFotoOk && window._bpwFotoBase64 && !window._bpwUploadFeito && BPW_GAS_URL){
         window._bpwUploadFeito = true;
         var nomeArq = nome||'cliente';
-        console.log('[BPW Fig] Enviando foto para Drive...');
-        $.ajax({
-          url: BPW_GAS_URL,
+        console.log('[BPW Fig] Enviando foto para Drive via FormData...');
+        var fd = new FormData();
+        fd.append('foto', window._bpwFotoBase64);
+        fd.append('nome', nomeArq);
+        fd.append('pedido', 'PENDENTE');
+        fd.append('tipo', 'image/jpeg');
+        fetch(BPW_GAS_URL, {
           method: 'POST',
-          contentType: 'text/plain;charset=utf-8',
-          data: JSON.stringify({foto: window._bpwFotoBase64, nome: nomeArq, pedido: 'PENDENTE', tipo: 'image/jpeg'}),
-          success: function(r){
-            try{
-              var res = typeof r==='string'?JSON.parse(r):r;
-              if(res.ok){
-                $('#bpw-h-foto-drive').val(res.link);
-                console.log('[BPW Fig] ✅ Foto salva no Drive:', res.link);
-              } else {
-                window._bpwUploadFeito=false;
-                console.error('[BPW Fig] ❌ GAS retornou erro:', res);
-              }
-            } catch(ex) {
+          body: fd
+        }).then(function(r){ return r.text(); }).then(function(txt){
+          try {
+            var res = JSON.parse(txt);
+            if(res.ok){
+              $('#bpw-h-foto-drive').val(res.link);
+              console.log('[BPW Fig] ✅ Foto salva no Drive:', res.link);
+            } else {
               window._bpwUploadFeito=false;
-              console.error('[BPW Fig] ❌ Resposta inválida:', r, ex);
+              console.error('[BPW Fig] ❌ GAS retornou erro:', res);
             }
-          },
-          error: function(xhr, status, err){
+          } catch(ex) {
             window._bpwUploadFeito=false;
-            console.error('[BPW Fig] ❌ Falha na requisição:', status, err, xhr);
+            console.error('[BPW Fig] ❌ Resposta inválida:', txt, ex);
           }
+        }).catch(function(err){
+          window._bpwUploadFeito=false;
+          console.error('[BPW Fig] ❌ Falha na requisição:', err);
         });
       }
     }
