@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05i — centralização preview + frase acima da imagem + debug mobile
+// Versão: 2026-05j — nome 20ch + botão ALTERAR + mobile reseleção
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -49,7 +49,7 @@
           <div class="bpw-fig-campos-grid">
             <div class="bpw-fig-field">
               <label>Nome do Craque *</label>
-              <input type="text" id="bpw-fig-nome" class="bpw-fig-input" maxlength="12" placeholder="Ex: ARTHUR" autocomplete="off" style="text-transform:uppercase">
+              <input type="text" id="bpw-fig-nome" class="bpw-fig-input" maxlength="20" placeholder="Ex: ARTHUR" autocomplete="off" style="text-transform:uppercase">
             </div>
             <div class="bpw-fig-field">
               <label>Data de Nascimento</label>
@@ -130,16 +130,25 @@
         bpwFigurinhaAtualizar();
       });
       // Time: sem valor default — placeholder já mostra o exemplo
-      $(document).on('change input','#bpw-fig-upload-input',function(e){
-        console.log('[BPW Fig] Input event:', e.type, 'files:', this.files.length);
-        var file=this.files[0];
-        if(!file) { console.log('[BPW Fig] Sem arquivo'); return; }
-        console.log('[BPW Fig] Arquivo:', file.name, file.size, 'bytes');
-        bpwValidarFoto(file);
+      $(document).on('change','#bpw-fig-upload-input',function(e){
+        var input = this;
+        // Pequeno delay para garantir que o file está totalmente disponível no mobile
+        setTimeout(function(){
+          if(!input.files || input.files.length === 0) { return; }
+          var file = input.files[0];
+          if(!file || !file.size) { return; }
+          bpwValidarFoto(file);
+        }, 50);
       });
       $(document).on('click','#bpw-fig-upload-wrap',function(e){
         if($(e.target).is('input,label,img,div#bpw-fig-quality-bar,div#bpw-fig-quality-fill,div#bpw-fig-quality-bar-wrap,div#bpw-fig-quality-label,div#bpw-fig-quality-msg')) return;
-        $('#bpw-fig-upload-input').trigger('click');
+        var $inp = $('#bpw-fig-upload-input');
+        $inp.val(''); // limpa para permitir reseleção do mesmo arquivo no mobile
+        $inp[0].click();
+      });
+      // Quando clicar no botão "ALTERAR A FOTO", também limpar value
+      $(document).on('click','#bpw-fig-upload-btn-label',function(){
+        $('#bpw-fig-upload-input').val('');
       });
       $(document).on('input','#bpw-fig-time',function(){
         this.value=this.value.toUpperCase();
@@ -155,6 +164,7 @@
       window._bpwFotoOk = false;
       window._bpwFotoBase64 = null;
       var $wrap = $('#bpw-fig-upload-wrap');
+      var $btnLabel = $('#bpw-fig-upload-btn-label');
       var $msg = $('#bpw-fig-quality-msg');
       var $fill = $('#bpw-fig-quality-fill');
       var $barWrap = $('#bpw-fig-quality-bar-wrap');
@@ -238,10 +248,12 @@
           $barWrap.show();
           if (ok) {
             $wrap.addClass('has-photo');
+            $btnLabel.text('ALTERAR A FOTO');
             window._bpwFotoOk = true;
             bpwFigurinhaAtualizar();
           } else {
             $wrap.removeClass('has-photo');
+            $btnLabel.text('ALTERAR A FOTO');
             window._bpwFotoOk = false;
             bpwFigurinhaAtualizar();
           }
