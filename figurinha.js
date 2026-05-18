@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05m — upload Drive FormData + validador pessoa fix
+// Versão: 2026-05n — score recalibrado, cap 100, corte 6, pessoa peso alto
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -187,17 +187,17 @@
           var fileSizeKB = file.size / 1024;
           var score = 0;
           var msgs = [];
-          if (w >= 800 && h >= 800) { score += 40; }
-          else if (w >= 500 && h >= 500) { score += 28; msgs.push('resolução moderada'); }
-          else if (w >= 300 && h >= 300) { score += 15; msgs.push('resolução baixa'); }
+          if (w >= 800 && h >= 800) { score += 25; }
+          else if (w >= 500 && h >= 500) { score += 18; msgs.push('resolução moderada'); }
+          else if (w >= 300 && h >= 300) { score += 10; msgs.push('resolução baixa'); }
           else { score += 0; msgs.push('resolução muito baixa'); }
-          if (fileSizeKB >= 500) { score += 35; }
-          else if (fileSizeKB >= 200) { score += 22; msgs.push('arquivo pequeno'); }
-          else if (fileSizeKB >= 80) { score += 10; msgs.push('arquivo muito pequeno'); }
+          if (fileSizeKB >= 500) { score += 20; }
+          else if (fileSizeKB >= 200) { score += 15; msgs.push('arquivo pequeno'); }
+          else if (fileSizeKB >= 80) { score += 8; msgs.push('arquivo muito pequeno'); }
           else { score += 0; msgs.push('arquivo minúsculo'); }
           var ratio = w / h;
-          if (ratio >= 0.6 && ratio <= 1.0) { score += 25; }
-          else if (ratio >= 0.4 && ratio <= 1.4) { score += 15; }
+          if (ratio >= 0.6 && ratio <= 1.0) { score += 20; }
+          else if (ratio >= 0.4 && ratio <= 1.4) { score += 12; }
           else { score += 5; msgs.push('proporção estranha'); }
           // Análise de enquadramento via canvas: detecta tom de pele no centro
           try {
@@ -227,10 +227,10 @@
             }
             var skinRatio = totalPx > 0 ? skinPx / totalPx : 0;
             console.log('[BPW Fig] Análise enquadramento — pele detectada:', (skinRatio*100).toFixed(1)+'%');
-            if (skinRatio >= 0.08) {
-              score += 15;
-            } else if (skinRatio >= 0.03) {
-              score += 7;
+            if (skinRatio >= 0.10) {
+              score += 35; // pessoa bem enquadrada
+            } else if (skinRatio >= 0.04) {
+              score += 15; // parcial / longe / de lado
               msgs.push('enquadramento parcial');
             } else {
               msgs.push('sem pessoa detectada');
@@ -238,10 +238,10 @@
           } catch(e) {
             console.warn('[BPW Fig] Erro na análise de enquadramento:', e);
           }
-          var pct = score;
-          // Se não detectou pessoa, força reprovação independente dos outros pontos
+          var pct = Math.min(score, 100);
+          // Sem pessoa = cap forte (reprovação)
           if (msgs.indexOf('sem pessoa detectada') > -1) {
-            pct = Math.min(pct, 40);
+            pct = Math.min(pct, 35);
           }
           var nota = (pct / 10).toFixed(1);
           var ok;
@@ -254,7 +254,7 @@
             $fill.css({width: pct + '%', background: '#2a7a2a'});
             $('#bpw-fig-quality-nota').text(nota + '/10').css('color','#2a7a2a');
             $msg.text('✅ Aprovada! Pode continuar.').css('color','#2a7a2a');
-          } else if (pct >= 50) {
+          } else if (pct >= 60) {
             // Mediana — avança mas mostra 1 insight + foto exemplo
             ok = true;
             $fill.css({width: pct + '%', background: '#e07b00'});
@@ -359,7 +359,7 @@
               console.log('[BPW Fig] ✅ Foto salva no Drive:', res.link);
             } else {
               window._bpwUploadFeito=false;
-              console.error('[BPW Fig] ❌ GAS retornou erro:', res);
+              console.error('[BPW Fig] ❌ GAS retornou erro:', JSON.stringify(res), 'raw:', txt);
             }
           } catch(ex) {
             window._bpwUploadFeito=false;
