@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05p — retry controlado upload (3 tentativas, 2s delay)
+// Versão: 2026-05q — upload só ao clicar Comprar + UUID para vincular pedido
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -319,16 +319,13 @@
       var peso = $('#bpw-fig-peso').val().trim();
       var time = $('#bpw-fig-time').val().trim();
       // Feedback visual em tempo real por campo
-      // Nome: obrigatório
       var $nome = $('#bpw-fig-nome');
       $nome.removeClass('error valid');
-      if(nome) $nome.addClass('valid'); // verde se preenchido
-      // Nasc: verde se completo, vermelho se digitou mas incompleto, azul se vazio
+      if(nome) $nome.addClass('valid');
       var $nasc = $('#bpw-fig-nasc');
       $nasc.removeClass('error valid');
       if(nasc.length === 10) $nasc.addClass('valid');
       else if(nasc.length > 0) $nasc.addClass('error');
-      // Alt, Peso, Time: opcionais — verde se preenchido, neutro se vazio
       var $alt = $('#bpw-fig-alt');
       $alt.removeClass('error valid');
       if(alt && alt !== 'm' && alt !== ' m') $alt.addClass('valid');
@@ -338,64 +335,58 @@
       var $time = $('#bpw-fig-time');
       $time.removeClass('error valid');
       if(time) $time.addClass('valid');
-      var fotoOk = window._bpwFotoOk;
       var dados = 'Nome: '+nome+' | Nasc: '+nasc+' | Alt: '+alt+' | Peso: '+peso+' | Time: '+time;
       $('#bpw-h-figurinha').val(dados);
-      // Upload para Drive: feito silenciosamente, com retry controlado (máx 3 tentativas)
-      if(window._bpwFotoOk && window._bpwFotoBase64 && !window._bpwUploadFeito && !window._bpwUploadEmCurso && BPW_GAS_URL){
-        if(typeof window._bpwUploadTentativas==='undefined') window._bpwUploadTentativas = 0;
-        if(window._bpwUploadTentativas >= 3){
-          console.warn('[BPW Fig] Máximo de tentativas atingido. Aguardando nova foto.');
-          return;
-        }
-        window._bpwUploadEmCurso = true;
-        window._bpwUploadTentativas++;
-        var nomeArq = nome||'cliente';
-        console.log('[BPW Fig] Enviando foto para Drive (tentativa '+window._bpwUploadTentativas+'/3)...');
-        fetch(BPW_GAS_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'text/plain'},
-          body: JSON.stringify({foto: window._bpwFotoBase64, nome: nomeArq, pedido: 'PENDENTE', tipo: 'image/jpeg'})
-        }).then(function(r){
-          console.log('[BPW Fig] GAS HTTP status:', r.status);
-          return r.text();
-        }).then(function(txt){
-          window._bpwUploadEmCurso = false;
-          try {
-            var res = JSON.parse(txt);
-            if(res.ok){
-              $('#bpw-h-foto-drive').val(res.link);
-              window._bpwUploadFeito = true;
-              console.log('[BPW Fig] ✅ Foto salva no Drive:', res.link);
-            } else {
-              console.error('[BPW Fig] ❌ GAS retornou erro:', txt);
-              // Retentar após 2 segundos
-              if(window._bpwUploadTentativas < 3){
-                setTimeout(function(){ bpwFigurinhaAtualizar(); }, 2000);
-              }
-            }
-          } catch(ex) {
-            console.error('[BPW Fig] ❌ Resposta inválida:', txt, ex);
-            if(window._bpwUploadTentativas < 3){
-              setTimeout(function(){ bpwFigurinhaAtualizar(); }, 2000);
-            }
-          }
-        }).catch(function(err){
-          window._bpwUploadEmCurso = false;
-          console.error('[BPW Fig] ❌ Falha na requisição:', err);
-        });
+      // Upload NÃO acontece aqui — só após clicar em Comprar (ver bpwFigurinhaValidarCompra)
+    }
+    
+    // Faz o upload da foto para o Drive AGORA. Callback recebe true/false.
+    function bpwFazerUploadFoto(cb) {
+      if(!window._bpwFotoBase64 || !BPW_GAS_URL){ cb(false); return; }
+      // Garantir que existe o campo hidden bpw-h-foto-id no formulário
+      if(!$('#bpw-h-foto-id').length){
+        $('form.js-product-form').first().append('<input type="hidden" id="bpw-h-foto-id" name="properties[ID Foto]" value="">');
       }
+      // Gerar UUID curto (8 chars hex) para identificar o pedido no Drive
+      if(!window._bpwFotoId){
+        window._bpwFotoId = 'BP' + Math.random().toString(36).substr(2,4).toUpperCase() + Date.now().toString(36).substr(-4).toUpperCase();
+      }
+      var nome = ($('#bpw-fig-nome').val()||'cliente').trim().toUpperCase().replace(/[^A-Z0-9]/g,'_');
+      console.log('[BPW Fig] Enviando foto para Drive (ID: '+window._bpwFotoId+')...');
+      fetch(BPW_GAS_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'text/plain'},
+        body: JSON.stringify({foto: window._bpwFotoBase64, nome: nome, pedido: window._bpwFotoId, tipo: 'image/jpeg'})
+      }).then(function(r){ return r.text(); }).then(function(txt){
+        try {
+          var res = JSON.parse(txt);
+          if(res.ok){
+            $('#bpw-h-foto-drive').val(res.link);
+            $('#bpw-h-foto-id').val(window._bpwFotoId);
+            console.log('[BPW Fig] ✅ Foto salva no Drive (ID '+window._bpwFotoId+'):', res.link);
+            cb(true);
+          } else {
+            console.error('[BPW Fig] ❌ GAS retornou erro:', txt);
+            cb(false);
+          }
+        } catch(ex) {
+          console.error('[BPW Fig] ❌ Resposta inválida:', txt, ex);
+          cb(false);
+        }
+      }).catch(function(err){
+        console.error('[BPW Fig] ❌ Falha na requisição:', err);
+        cb(false);
+      });
     }
     function bpwFigurinhaValidarCompra() {
-      // módulo só carrega em figurinha product — sem necessidade de checar
+      // Se já fez upload com sucesso nesta sessão, libera direto
+      if(window._bpwUploadFeitoOk){
+        $('#bpw-fig-aviso-geral').hide();
+        return true;
+      }
       var nome = $('#bpw-fig-nome').val().trim();
-      var nasc = $('#bpw-fig-nasc').val().trim();
-      var alt  = $('#bpw-fig-alt').val().trim();
-      var peso = $('#bpw-fig-peso').val().trim();
-      var time = $('#bpw-fig-time').val().trim();
       var fotoOk = window._bpwFotoOk;
       var erros = [];
-      // Obrigatório: apenas nome e foto
       if(!nome) erros.push('#bpw-fig-nome');
       $('.bpw-fig-input').removeClass('error');
       erros.forEach(function(id){ $(id).addClass('error'); });
@@ -405,7 +396,36 @@
         return false;
       }
       $('#bpw-fig-aviso-geral').hide();
-      return true;
+      // Iniciar upload AGORA e bloquear compra até concluir
+      if(!window._bpwUploadIniciado){
+        window._bpwUploadIniciado = true;
+        $('#bpw-fig-upload-progress').show().text('📤 Enviando foto...').css('color','#0038a8');
+        // Desabilitar botões de compra durante upload
+        $('.js-addtocart,.js-prod-submit-form,[data-store="product-buy-button"]').prop('disabled',true).css('opacity','0.6');
+        bpwFazerUploadFoto(function(ok){
+          window._bpwUploadIniciado = false;
+          $('.js-addtocart,.js-prod-submit-form,[data-store="product-buy-button"]').prop('disabled',false).css('opacity','');
+          if(ok){
+            window._bpwUploadFeitoOk = true;
+            $('#bpw-fig-upload-progress').text('✅ Foto enviada! Clique em Comprar novamente para finalizar.').css('color','#2a7a2a');
+          } else {
+            // Tentar mais 2 vezes automaticamente
+            if(!window._bpwUploadRetry) window._bpwUploadRetry = 0;
+            window._bpwUploadRetry++;
+            if(window._bpwUploadRetry < 3){
+              $('#bpw-fig-upload-progress').text('⏳ Tentando novamente ('+window._bpwUploadRetry+'/3)...').css('color','#e07b00');
+              setTimeout(function(){
+                window._bpwUploadIniciado = false;
+                bpwFigurinhaValidarCompra(); // re-tenta
+              }, 1500);
+            } else {
+              $('#bpw-fig-upload-progress').text('⚠ Não foi possível enviar a foto. Tente novamente em alguns segundos ou contate o suporte.').css('color','#c00');
+              window._bpwUploadRetry = 0;
+            }
+          }
+        });
+      }
+      return false; // bloqueia compra até upload terminar
     }
 
 
