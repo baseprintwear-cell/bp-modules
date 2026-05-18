@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05o — JSON via text/plain (sem preflight) + logs HTTP detalhados
+// Versão: 2026-05p — retry controlado upload (3 tentativas, 2s delay)
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -163,6 +163,9 @@
     function bpwValidarFoto(file) {
       window._bpwFotoOk = false;
       window._bpwFotoBase64 = null;
+      window._bpwUploadFeito = false;
+      window._bpwUploadEmCurso = false;
+      window._bpwUploadTentativas = 0;
       var $wrap = $('#bpw-fig-upload-wrap');
       var $btnLabel = $('#bpw-fig-upload-btn-label');
       var $msg = $('#bpw-fig-quality-msg');
@@ -338,37 +341,47 @@
       var fotoOk = window._bpwFotoOk;
       var dados = 'Nome: '+nome+' | Nasc: '+nasc+' | Alt: '+alt+' | Peso: '+peso+' | Time: '+time;
       $('#bpw-h-figurinha').val(dados);
-      // Upload para Drive: feito silenciosamente, sem mensagens de erro para o usuário
-      if(window._bpwFotoOk && window._bpwFotoBase64 && !window._bpwUploadFeito && BPW_GAS_URL){
-        window._bpwUploadFeito = true;
+      // Upload para Drive: feito silenciosamente, com retry controlado (máx 3 tentativas)
+      if(window._bpwFotoOk && window._bpwFotoBase64 && !window._bpwUploadFeito && !window._bpwUploadEmCurso && BPW_GAS_URL){
+        if(typeof window._bpwUploadTentativas==='undefined') window._bpwUploadTentativas = 0;
+        if(window._bpwUploadTentativas >= 3){
+          console.warn('[BPW Fig] Máximo de tentativas atingido. Aguardando nova foto.');
+          return;
+        }
+        window._bpwUploadEmCurso = true;
+        window._bpwUploadTentativas++;
         var nomeArq = nome||'cliente';
-        console.log('[BPW Fig] Enviando foto para Drive...');
-        // text/plain (sem charset) NÃO dispara preflight CORS
-        // O GAS faz JSON.parse(e.postData.contents) internamente
+        console.log('[BPW Fig] Enviando foto para Drive (tentativa '+window._bpwUploadTentativas+'/3)...');
         fetch(BPW_GAS_URL, {
           method: 'POST',
           headers: {'Content-Type': 'text/plain'},
           body: JSON.stringify({foto: window._bpwFotoBase64, nome: nomeArq, pedido: 'PENDENTE', tipo: 'image/jpeg'})
-        }).then(function(r){ 
+        }).then(function(r){
           console.log('[BPW Fig] GAS HTTP status:', r.status);
-          return r.text(); 
+          return r.text();
         }).then(function(txt){
-          console.log('[BPW Fig] GAS resposta bruta:', txt);
+          window._bpwUploadEmCurso = false;
           try {
             var res = JSON.parse(txt);
             if(res.ok){
               $('#bpw-h-foto-drive').val(res.link);
+              window._bpwUploadFeito = true;
               console.log('[BPW Fig] ✅ Foto salva no Drive:', res.link);
             } else {
-              window._bpwUploadFeito=false;
-              console.error('[BPW Fig] ❌ GAS retornou erro:', JSON.stringify(res), 'raw:', txt);
+              console.error('[BPW Fig] ❌ GAS retornou erro:', txt);
+              // Retentar após 2 segundos
+              if(window._bpwUploadTentativas < 3){
+                setTimeout(function(){ bpwFigurinhaAtualizar(); }, 2000);
+              }
             }
           } catch(ex) {
-            window._bpwUploadFeito=false;
             console.error('[BPW Fig] ❌ Resposta inválida:', txt, ex);
+            if(window._bpwUploadTentativas < 3){
+              setTimeout(function(){ bpwFigurinhaAtualizar(); }, 2000);
+            }
           }
         }).catch(function(err){
-          window._bpwUploadFeito=false;
+          window._bpwUploadEmCurso = false;
           console.error('[BPW Fig] ❌ Falha na requisição:', err);
         });
       }
