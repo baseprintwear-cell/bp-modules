@@ -1,5 +1,5 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05n — score recalibrado, cap 100, corte 6, pessoa peso alto
+// Versão: 2026-05o — JSON via text/plain (sem preflight) + logs HTTP detalhados
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
@@ -342,16 +342,18 @@
       if(window._bpwFotoOk && window._bpwFotoBase64 && !window._bpwUploadFeito && BPW_GAS_URL){
         window._bpwUploadFeito = true;
         var nomeArq = nome||'cliente';
-        console.log('[BPW Fig] Enviando foto para Drive via FormData...');
-        var fd = new FormData();
-        fd.append('foto', window._bpwFotoBase64);
-        fd.append('nome', nomeArq);
-        fd.append('pedido', 'PENDENTE');
-        fd.append('tipo', 'image/jpeg');
+        console.log('[BPW Fig] Enviando foto para Drive...');
+        // text/plain (sem charset) NÃO dispara preflight CORS
+        // O GAS faz JSON.parse(e.postData.contents) internamente
         fetch(BPW_GAS_URL, {
           method: 'POST',
-          body: fd
-        }).then(function(r){ return r.text(); }).then(function(txt){
+          headers: {'Content-Type': 'text/plain'},
+          body: JSON.stringify({foto: window._bpwFotoBase64, nome: nomeArq, pedido: 'PENDENTE', tipo: 'image/jpeg'})
+        }).then(function(r){ 
+          console.log('[BPW Fig] GAS HTTP status:', r.status);
+          return r.text(); 
+        }).then(function(txt){
+          console.log('[BPW Fig] GAS resposta bruta:', txt);
           try {
             var res = JSON.parse(txt);
             if(res.ok){
