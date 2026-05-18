@@ -1,9 +1,10 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05r — URLSearchParams (fix definitivo CORS + GAS)
+// Versão: 2026-05r — URLSearchParams + upload SÓ no Comprar + UUID
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
   window._bpwFigModuleLoaded = true;
+  console.log('%c[BPW Fig] MÓDULO v2026-05r CARREGADO — upload só ao clicar Comprar', 'background:#0038a8;color:#fff;padding:2px 6px;border-radius:3px');
 
   var BPW_GAS_URL = 'https://script.google.com/macros/s/AKfycbz--8MG4JD52jU2LFJWMD8kOFaEJTKF6Xq4778UB_387mMfo-JlAO7hlZyhB8vBYQbRUA/exec';
   window._bpwFotoOk = false;
