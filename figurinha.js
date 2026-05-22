@@ -1,10 +1,10 @@
 // BP Kids — Módulo Figurinha Copa 26
-// Versão: 2026-05s — retry tolerante + UUID gravado antes do upload
+// Versão: 2026-05t — compra em UMA operação só (auto-submit após upload)
 
 (function($){
   if(window._bpwFigModuleLoaded) return;
   window._bpwFigModuleLoaded = true;
-  console.log('%c[BPW Fig] MÓDULO v2026-05s CARREGADO — upload só ao clicar Comprar', 'background:#0038a8;color:#fff;padding:2px 6px;border-radius:3px');
+  console.log('%c[BPW Fig] MÓDULO v2026-05t CARREGADO — upload só ao clicar Comprar', 'background:#0038a8;color:#fff;padding:2px 6px;border-radius:3px');
 
   var BPW_GAS_URL = 'https://script.google.com/macros/s/AKfycbz--8MG4JD52jU2LFJWMD8kOFaEJTKF6Xq4778UB_387mMfo-JlAO7hlZyhB8vBYQbRUA/exec';
   window._bpwFotoOk = false;
@@ -409,22 +409,21 @@
       // Iniciar upload AGORA e bloquear compra até concluir
       if(!window._bpwUploadIniciado){
         window._bpwUploadIniciado = true;
-        $('#bpw-fig-upload-progress').show().text('📤 Enviando foto...').css('color','#0038a8');
+        // Mostrar status do upload e rolar para ele para o cliente ver
+        $('#bpw-fig-upload-progress').show().text('📤 Enviando foto... aguarde alguns segundos.').css('color','#0038a8');
+        var $progress = $('#bpw-fig-upload-progress');
+        if($progress.length) $progress[0].scrollIntoView({behavior:'smooth',block:'center'});
         // Desabilitar botões de compra durante upload
         $('.js-addtocart,.js-prod-submit-form,[data-store="product-buy-button"]').prop('disabled',true).css('opacity','0.6');
         bpwFazerUploadFoto(function(ok){
           window._bpwUploadIniciado = false;
           $('.js-addtocart,.js-prod-submit-form,[data-store="product-buy-button"]').prop('disabled',false).css('opacity','');
           if(ok){
-            window._bpwUploadFeitoOk = true;
-            $('#bpw-fig-upload-progress').text('✅ Foto enviada! Clique em Comprar novamente para finalizar.').css('color','#2a7a2a');
+            _bpwFinalizarCompra();
           } else {
-            // Em caso de erro, libera mesmo assim (na prática o arquivo é salvo no Drive)
-            // O UUID está no campo hidden e identifica o pedido
             if(!window._bpwUploadRetry) window._bpwUploadRetry = 0;
             window._bpwUploadRetry++;
             if(window._bpwUploadRetry < 2){
-              // Apenas 1 retry, com mais tempo de espera (DriveApp temporário)
               $('#bpw-fig-upload-progress').text('⏳ Aguarde, processando...').css('color','#e07b00');
               setTimeout(function(){
                 window._bpwUploadIniciado = false;
@@ -432,15 +431,32 @@
               }, 3000);
             } else {
               // Considera sucesso silenciosamente — UUID já foi gravado no pedido
-              window._bpwUploadFeitoOk = true;
               window._bpwUploadRetry = 0;
-              $('#bpw-fig-upload-progress').text('✅ Foto processada! Clique em Comprar novamente para finalizar.').css('color','#2a7a2a');
-              console.log('[BPW Fig] Upload com erro transient, mas considerado OK (UUID gravado no pedido)');
+              _bpwFinalizarCompra();
             }
           }
         });
       }
-      return false; // bloqueia compra até upload terminar
+      return false; // bloqueia o click ATUAL, mas finaliza automaticamente quando upload terminar
+    }
+
+    // Finaliza a compra automaticamente após o upload, sem o cliente precisar clicar de novo
+    function _bpwFinalizarCompra() {
+      window._bpwUploadFeitoOk = true;
+      $('#bpw-fig-upload-progress').text('✅ Foto enviada! Finalizando sua compra...').css('color','#2a7a2a');
+      // Pequeno delay para o cliente ver a mensagem de sucesso
+      setTimeout(function(){
+        // Disparar o click no botão Comprar — desta vez vai passar pela validação
+        var btn = document.querySelector('.js-addtocart, .js-prod-submit-form, [data-store="product-buy-button"]');
+        if(btn){
+          console.log('[BPW Fig] Disparando compra automaticamente');
+          btn.click();
+        } else {
+          // Fallback: submit do form
+          var form = document.querySelector('form.js-product-form, form[action="/comprar/"]');
+          if(form) form.submit();
+        }
+      }, 800);
     }
 
 
